@@ -353,13 +353,13 @@ class InputFeedRNNDecoder(RNNDecoderBase):
 
             decoder_output2, p_attn = self.attn2(
                 rnn_output,
-                memory_bank1.transpose(0, 1),
-                memory_lengths=memory_lengths1)
+                memory_bank2.transpose(0, 1),
+                memory_lengths=memory_lengths2)
 
             decoder_output3, p_attn = self.attn3(
                 rnn_output,
-                memory_bank1.transpose(0, 1),
-                memory_lengths=memory_lengths1)
+                memory_bank3.transpose(0, 1),
+                memory_lengths=memory_lengths3)
 
             if self.context_gate is not None:
                 # TODO: context gate should be employed
