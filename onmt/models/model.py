@@ -13,13 +13,17 @@ class NMTModel(nn.Module):
       multi<gpu (bool): setup for multigpu support
     """
 
-    def __init__(self, encoder, decoder, multigpu=False):
+    def __init__(self, encoder1, encoder2, encoder3, decoder, multigpu=False):
         self.multigpu = multigpu
         super(NMTModel, self).__init__()
-        self.encoder = encoder
+        self.encoder1 = encoder1
+        self.encoder2 = encoder2
+        self.encoder3 = encoder3
+
         self.decoder = decoder
 
-    def forward(self, src, tgt, lengths, dec_state=None):
+    def forward(self, src1, src2, src3, tgt,
+                lengths1, lengths2, lengths3, dec_state=None):
         """Forward propagate a `src` and `tgt` pair for training.
         Possible initialized with a beginning decoder state.
 
@@ -42,14 +46,24 @@ class NMTModel(nn.Module):
         """
         tgt = tgt[:-1]  # exclude last target from inputs
 
-        enc_final, memory_bank = self.encoder(src, lengths)
+        enc_final1, memory_bank1 = self.encoder(src1, lengths1)
+        enc_final2, memory_bank2 = self.encoder(src2, lengths2)
+        enc_final3, memory_bank3 = self.encoder(src3, lengths3)
+
+        if isinstance(enc_final1, tuple):
+            enc_final = ((enc_final1[0] + enc_final2[0] + enc_final3[0]) / 3.,
+                         (enc_final1[1] + enc_final2[1] + enc_final3[1]) / 3.)
+
         enc_state = \
-            self.decoder.init_decoder_state(src, memory_bank, enc_final)
+            self.decoder.init_decoder_state(src1, memory_bank1, enc_final)
+
         decoder_outputs, dec_state, attns = \
-            self.decoder(tgt, memory_bank,
+            self.decoder(tgt, memory_bank1, memory_bank2, memory_bank3,
                          enc_state if dec_state is None
                          else dec_state,
-                         memory_lengths=lengths)
+                         memory_lengths1=lengths1,
+                         memory_lengths2=lengths2,
+                         memory_lengths3=lengths3)
         if self.multigpu:
             # Not yet supported on multi-gpu
             dec_state = None

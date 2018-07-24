@@ -16,7 +16,7 @@ from onmt.encoders.mean_encoder import MeanEncoder
 from onmt.encoders.audio_encoder import AudioEncoder
 from onmt.encoders.image_encoder import ImageEncoder
 
-from onmt.decoders.decoder import InputFeedRNNDecoder, StdRNNDecoder
+from onmt.decoders.tri_decoder import InputFeedRNNDecoder, StdRNNDecoder
 from onmt.decoders.transformer import TransformerDecoder
 from onmt.decoders.cnn_decoder import CNNDecoder
 
@@ -91,37 +91,41 @@ def build_decoder(opt, embeddings):
         opt: the option in current environment.
         embeddings (Embeddings): vocab embeddings for this decoder.
     """
-    if opt.decoder_type == "transformer":
-        return TransformerDecoder(opt.dec_layers, opt.rnn_size,
-                                  opt.heads, opt.transformer_ff,
-                                  opt.global_attention, opt.copy_attn,
-                                  opt.self_attn_type,
-                                  opt.dropout, embeddings)
-    elif opt.decoder_type == "cnn":
-        return CNNDecoder(opt.dec_layers, opt.rnn_size,
-                          opt.global_attention, opt.copy_attn,
-                          opt.cnn_kernel_width, opt.dropout,
-                          embeddings)
-    elif opt.input_feed:
-        return InputFeedRNNDecoder(opt.rnn_type, opt.brnn,
-                                   opt.dec_layers, opt.rnn_size,
-                                   opt.global_attention,
-                                   opt.coverage_attn,
-                                   opt.context_gate,
-                                   opt.copy_attn,
-                                   opt.dropout,
-                                   embeddings,
-                                   opt.reuse_copy_attn)
-    else:
-        return StdRNNDecoder(opt.rnn_type, opt.brnn,
-                             opt.dec_layers, opt.rnn_size,
-                             opt.global_attention,
-                             opt.coverage_attn,
-                             opt.context_gate,
-                             opt.copy_attn,
-                             opt.dropout,
-                             embeddings,
-                             opt.reuse_copy_attn)
+    enc_list = []
+    for _ in range(3):
+        if opt.decoder_type == "transformer":
+            model = TransformerDecoder(opt.dec_layers, opt.rnn_size,
+                                       opt.heads, opt.transformer_ff,
+                                       opt.global_attention, opt.copy_attn,
+                                       opt.self_attn_type,
+                                       opt.dropout, embeddings)
+        elif opt.decoder_type == "cnn":
+            model = CNNDecoder(opt.dec_layers, opt.rnn_size,
+                               opt.global_attention, opt.copy_attn,
+                               opt.cnn_kernel_width, opt.dropout,
+                               embeddings)
+        elif opt.input_feed:
+            model = InputFeedRNNDecoder(opt.rnn_type, opt.brnn,
+                                        opt.dec_layers, opt.rnn_size,
+                                        opt.global_attention,
+                                        opt.coverage_attn,
+                                        opt.context_gate,
+                                        opt.copy_attn,
+                                        opt.dropout,
+                                        embeddings,
+                                        opt.reuse_copy_attn)
+        else:
+            model = StdRNNDecoder(opt.rnn_type, opt.brnn,
+                                  opt.dec_layers, opt.rnn_size,
+                                  opt.global_attention,
+                                  opt.coverage_attn,
+                                  opt.context_gate,
+                                  opt.copy_attn,
+                                  opt.dropout,
+                                  embeddings,
+                                  opt.reuse_copy_attn)
+        enc_list.append(model)
+    return enc_list
 
 
 def load_test_model(opt, dummy_opt):
@@ -193,7 +197,7 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
 
     # Build NMTModel(= encoder + decoder).
     device = torch.device("cuda" if gpu else "cpu")
-    model = onmt.models.NMTModel(encoder, decoder)
+    model = onmt.models.NMTModel(encoder[0], encoder[1], encoder[2], decoder)
     model.model_type = model_opt.model_type
 
     # Build Generator.
