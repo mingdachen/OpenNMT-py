@@ -53,6 +53,8 @@ class NMTModel(nn.Module):
         if isinstance(enc_final1, tuple):
             enc_final = ((enc_final1[0] + enc_final2[0] + enc_final3[0]) / 3.,
                          (enc_final1[1] + enc_final2[1] + enc_final3[1]) / 3.)
+        else:
+            enc_final = (enc_final1 + enc_final2 + enc_final3) / 3.
 
         enc_state = \
             self.decoder.init_decoder_state(src1, memory_bank1, enc_final)
