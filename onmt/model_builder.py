@@ -67,21 +67,25 @@ def build_encoder(opt, embeddings):
         opt: the option in current environment.
         embeddings (Embeddings): vocab embeddings for this encoder.
     """
-    if opt.encoder_type == "transformer":
-        return TransformerEncoder(opt.enc_layers, opt.rnn_size,
-                                  opt.heads, opt.transformer_ff,
-                                  opt.dropout, embeddings)
-    elif opt.encoder_type == "cnn":
-        return CNNEncoder(opt.enc_layers, opt.rnn_size,
-                          opt.cnn_kernel_width,
-                          opt.dropout, embeddings)
-    elif opt.encoder_type == "mean":
-        return MeanEncoder(opt.enc_layers, embeddings)
-    else:
-        # "rnn" or "brnn"
-        return RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
-                          opt.rnn_size, opt.dropout, embeddings,
-                          opt.bridge)
+    enc_list = []
+    for _ in range(3):
+        if opt.encoder_type == "transformer":
+            model = TransformerEncoder(opt.enc_layers, opt.rnn_size,
+                                       opt.heads, opt.transformer_ff,
+                                       opt.dropout, embeddings)
+        elif opt.encoder_type == "cnn":
+            model = CNNEncoder(opt.enc_layers, opt.rnn_size,
+                               opt.cnn_kernel_width,
+                               opt.dropout, embeddings)
+        elif opt.encoder_type == "mean":
+            model = MeanEncoder(opt.enc_layers, embeddings)
+        else:
+            # "rnn" or "brnn"
+            model = RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
+                               opt.rnn_size, opt.dropout, embeddings,
+                               opt.bridge)
+        enc_list.append(model)
+    return enc_list
 
 
 def build_decoder(opt, embeddings):
@@ -91,41 +95,37 @@ def build_decoder(opt, embeddings):
         opt: the option in current environment.
         embeddings (Embeddings): vocab embeddings for this decoder.
     """
-    enc_list = []
-    for _ in range(3):
-        if opt.decoder_type == "transformer":
-            model = TransformerDecoder(opt.dec_layers, opt.rnn_size,
-                                       opt.heads, opt.transformer_ff,
-                                       opt.global_attention, opt.copy_attn,
-                                       opt.self_attn_type,
-                                       opt.dropout, embeddings)
-        elif opt.decoder_type == "cnn":
-            model = CNNDecoder(opt.dec_layers, opt.rnn_size,
-                               opt.global_attention, opt.copy_attn,
-                               opt.cnn_kernel_width, opt.dropout,
-                               embeddings)
-        elif opt.input_feed:
-            model = InputFeedRNNDecoder(opt.rnn_type, opt.brnn,
-                                        opt.dec_layers, opt.rnn_size,
-                                        opt.global_attention,
-                                        opt.coverage_attn,
-                                        opt.context_gate,
-                                        opt.copy_attn,
-                                        opt.dropout,
-                                        embeddings,
-                                        opt.reuse_copy_attn)
-        else:
-            model = StdRNNDecoder(opt.rnn_type, opt.brnn,
-                                  opt.dec_layers, opt.rnn_size,
-                                  opt.global_attention,
-                                  opt.coverage_attn,
-                                  opt.context_gate,
-                                  opt.copy_attn,
-                                  opt.dropout,
-                                  embeddings,
-                                  opt.reuse_copy_attn)
-        enc_list.append(model)
-    return enc_list
+    if opt.decoder_type == "transformer":
+        return TransformerDecoder(opt.dec_layers, opt.rnn_size,
+                                  opt.heads, opt.transformer_ff,
+                                  opt.global_attention, opt.copy_attn,
+                                  opt.self_attn_type,
+                                  opt.dropout, embeddings)
+    elif opt.decoder_type == "cnn":
+        return CNNDecoder(opt.dec_layers, opt.rnn_size,
+                          opt.global_attention, opt.copy_attn,
+                          opt.cnn_kernel_width, opt.dropout,
+                          embeddings)
+    elif opt.input_feed:
+        return InputFeedRNNDecoder(opt.rnn_type, opt.brnn,
+                                   opt.dec_layers, opt.rnn_size,
+                                   opt.global_attention,
+                                   opt.coverage_attn,
+                                   opt.context_gate,
+                                   opt.copy_attn,
+                                   opt.dropout,
+                                   embeddings,
+                                   opt.reuse_copy_attn)
+    else:
+        return StdRNNDecoder(opt.rnn_type, opt.brnn,
+                             opt.dec_layers, opt.rnn_size,
+                             opt.global_attention,
+                             opt.coverage_attn,
+                             opt.context_gate,
+                             opt.copy_attn,
+                             opt.dropout,
+                             embeddings,
+                             opt.reuse_copy_attn)
 
 
 def load_test_model(opt, dummy_opt):
