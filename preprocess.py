@@ -47,8 +47,8 @@ def parse_args():
     return opt
 
 
-def build_save_in_shards(src_corpus, tgt_corpus, fields,
-                         corpus_type, opt):
+def build_save_in_shards(src_corpus1, src_corpus2, src_corpus3,
+                         tgt_corpus, fields, corpus_type, opt):
     """
     Divide the big corpus into shards, and build dataset separately.
     This is currently only for data_type=='text'.
@@ -76,7 +76,9 @@ def build_save_in_shards(src_corpus, tgt_corpus, fields,
     2 * `max_shard_size`(source + target).
     """
 
-    corpus_size = os.path.getsize(src_corpus)
+    corpus_size = max(os.path.getsize(src_corpus1),
+                      os.path.getsize(src_corpus2),
+                      os.path.getsize(src_corpus3))
     if corpus_size > 10 * (1024 ** 2) and opt.max_shard_size == 0:
         logger.info("Warning. The corpus %s is larger than 10M bytes, "
                     "you can set '-max_shard_size' to process it by "
@@ -88,9 +90,15 @@ def build_save_in_shards(src_corpus, tgt_corpus, fields,
                     % opt.max_shard_size)
 
     ret_list = []
-    src_iter = inputters.ShardedTextCorpusIterator(
-        src_corpus, opt.src_seq_length_trunc,
-        "src", opt.max_shard_size)
+    src_iter1 = inputters.ShardedTextCorpusIterator(
+        src_corpus1, opt.src_seq_length_trunc,
+        "src1", opt.max_shard_size)
+    src_iter2 = inputters.ShardedTextCorpusIterator(
+        src_corpus2, opt.src_seq_length_trunc,
+        "src2", opt.max_shard_size)
+    src_iter3 = inputters.ShardedTextCorpusIterator(
+        src_corpus3, opt.src_seq_length_trunc,
+        "src3", opt.max_shard_size)
     tgt_iter = inputters.ShardedTextCorpusIterator(
         tgt_corpus, opt.tgt_seq_length_trunc,
         "tgt", opt.max_shard_size,
@@ -100,7 +108,7 @@ def build_save_in_shards(src_corpus, tgt_corpus, fields,
     while not src_iter.hit_end():
         index += 1
         dataset = inputters.TextDataset(
-            fields, src_iter, tgt_iter,
+            fields, src_iter1, src_iter2, src_iter3, tgt_iter,
             src_iter.num_feats, tgt_iter.num_feats,
             src_seq_length=opt.src_seq_length,
             tgt_seq_length=opt.tgt_seq_length,
@@ -125,16 +133,20 @@ def build_save_dataset(corpus_type, fields, opt):
     assert corpus_type in ['train', 'valid']
 
     if corpus_type == 'train':
-        src_corpus = opt.train_src
+        src_corpus1 = opt.train_src1
+        src_corpus2 = opt.train_src2
+        src_corpus3 = opt.train_src3
         tgt_corpus = opt.train_tgt
     else:
-        src_corpus = opt.valid_src
+        src_corpus1 = opt.valid_src1
+        src_corpus2 = opt.valid_src2
+        src_corpus3 = opt.valid_src3
         tgt_corpus = opt.valid_tgt
 
     # Currently we only do preprocess sharding for corpus: data_type=='text'.
     if opt.data_type == 'text':
         return build_save_in_shards(
-            src_corpus, tgt_corpus, fields,
+            src_corpus1, src_corpus2, src_corpus3, tgt_corpus, fields,
             corpus_type, opt)
 
     # For data_type == 'img' or 'audio', currently we don't do
@@ -143,7 +155,9 @@ def build_save_dataset(corpus_type, fields, opt):
     # to do this should users need this feature.
     dataset = inputters.build_dataset(
         fields, opt.data_type,
-        src_path=src_corpus,
+        src_path=src_corpus1,
+        src_path=src_corpus2,
+        src_path=src_corpus3,
         tgt_path=tgt_corpus,
         src_dir=opt.src_dir,
         src_seq_length=opt.src_seq_length,

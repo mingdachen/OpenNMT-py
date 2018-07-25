@@ -135,7 +135,11 @@ def preprocess_opts(parser):
                        help="""Type of the source input.
                        Options are [text|img].""")
 
-    group.add_argument('-train_src', required=True,
+    group.add_argument('-train_src1', required=True,
+                       help="Path to the training source data")
+    group.add_argument('-train_src2', required=True,
+                       help="Path to the training source data")
+    group.add_argument('-train_src3', required=True,
                        help="Path to the training source data")
     group.add_argument('-train_tgt', required=True,
                        help="Path to the training target data")
@@ -414,7 +418,13 @@ def translate_opts(parser):
     group.add_argument('-data_type', default="text",
                        help="Type of the source input. Options: [text|img].")
 
-    group.add_argument('-src', required=True,
+    group.add_argument('-src1', required=True,
+                       help="""Source sequence to decode (one line per
+                       sequence)""")
+    group.add_argument('-src2', required=True,
+                       help="""Source sequence to decode (one line per
+                       sequence)""")
+    group.add_argument('-src3', required=True,
                        help="""Source sequence to decode (one line per
                        sequence)""")
     group.add_argument('-src_dir', default="",

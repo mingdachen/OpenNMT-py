@@ -37,9 +37,10 @@ class TextDataset(DatasetBase):
                 out examples?
     """
 
-    def __init__(self, fields, src_examples_iter, tgt_examples_iter,
-                 num_src_feats=0, num_tgt_feats=0,
-                 src_seq_length=0, tgt_seq_length=0,
+    def __init__(self, fields, src_examples_iter1, src_examples_iter2,
+                 src_examples_iter3, tgt_examples_iter, num_src_feats1=0,
+                 num_src_feats2=0, num_src_feats3=0,
+                 num_tgt_feats=0, src_seq_length=0, tgt_seq_length=0,
                  dynamic_dict=True, use_filter_pred=True):
         self.data_type = 'text'
 
@@ -47,17 +48,22 @@ class TextDataset(DatasetBase):
         # collapse_copy_scores and in Translator.py
         self.src_vocabs = []
 
-        self.n_src_feats = num_src_feats
+        self.n_src_feats1 = num_src_feats1
+        self.n_src_feats2 = num_src_feats2
+        self.n_src_feats3 = num_src_feats3
         self.n_tgt_feats = num_tgt_feats
 
         # Each element of an example is a dictionary whose keys represents
         # at minimum the src tokens and their indices and potentially also
         # the src and tgt features and alignment information.
         if tgt_examples_iter is not None:
-            examples_iter = (self._join_dicts(src, tgt) for src, tgt in
-                             zip(src_examples_iter, tgt_examples_iter))
+            examples_iter = (self._join_dicts(src1, src2, src3, tgt)
+                             for src1, src2, src3, tgt in
+                             zip(src_examples_iter1, src_examples_iter2,
+                                 src_examples_iter3, tgt_examples_iter))
         else:
-            examples_iter = src_examples_iter
+            examples_iter = zip(
+                src_examples_iter1, src_examples_iter2, src_examples_iter3)
 
         if dynamic_dict:
             examples_iter = self._dynamic_dict(examples_iter)
@@ -143,7 +149,7 @@ class TextDataset(DatasetBase):
         Returns:
             (example_dict iterator, num_feats) tuple.
         """
-        assert side in ['src', 'tgt']
+        assert side in ['src1', 'src2', 'src3' 'tgt']
 
         if text_iter is None:
             if text_path is not None:
