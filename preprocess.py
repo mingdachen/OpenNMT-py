@@ -82,7 +82,7 @@ def build_save_in_shards(src_corpus1, src_corpus2, src_corpus3,
     if corpus_size > 10 * (1024 ** 2) and opt.max_shard_size == 0:
         logger.info("Warning. The corpus %s is larger than 10M bytes, "
                     "you can set '-max_shard_size' to process it by "
-                    "small shards to use less memory." % src_corpus)
+                    "small shards to use less memory." % src_corpus1)
 
     if opt.max_shard_size != 0:
         logger.info(' * divide corpus into shards and build dataset '
@@ -102,14 +102,14 @@ def build_save_in_shards(src_corpus1, src_corpus2, src_corpus3,
     tgt_iter = inputters.ShardedTextCorpusIterator(
         tgt_corpus, opt.tgt_seq_length_trunc,
         "tgt", opt.max_shard_size,
-        assoc_iter=src_iter)
+        assoc_iter=src_iter1)
 
     index = 0
-    while not src_iter.hit_end():
+    while not src_iter1.hit_end():
         index += 1
         dataset = inputters.TextDataset(
             fields, src_iter1, src_iter2, src_iter3, tgt_iter,
-            src_iter.num_feats, tgt_iter.num_feats,
+            src_iter1.num_feats, tgt_iter.num_feats,
             src_seq_length=opt.src_seq_length,
             tgt_seq_length=opt.tgt_seq_length,
             dynamic_dict=opt.dynamic_dict)
@@ -155,9 +155,9 @@ def build_save_dataset(corpus_type, fields, opt):
     # to do this should users need this feature.
     dataset = inputters.build_dataset(
         fields, opt.data_type,
-        src_path=src_corpus1,
-        src_path=src_corpus2,
-        src_path=src_corpus3,
+        src_path1=src_corpus1,
+        src_path2=src_corpus2,
+        src_path3=src_corpus3,
         tgt_path=tgt_corpus,
         src_dir=opt.src_dir,
         src_seq_length=opt.src_seq_length,
@@ -202,14 +202,15 @@ def main():
     logger.info("Extracting features...")
 
     src_nfeats = inputters.get_num_features(
-        opt.data_type, opt.train_src, 'src')
+        opt.data_type, opt.train_src1, 'src1')
     tgt_nfeats = inputters.get_num_features(
         opt.data_type, opt.train_tgt, 'tgt')
     logger.info(" * number of source features: %d." % src_nfeats)
     logger.info(" * number of target features: %d." % tgt_nfeats)
 
     logger.info("Building `Fields` object...")
-    fields = inputters.get_fields(opt.data_type, src_nfeats, tgt_nfeats)
+    fields = inputters.get_fields(
+        opt.data_type, src_nfeats, src_nfeats, src_nfeats, tgt_nfeats)
 
     logger.info("Building & saving training data...")
     train_dataset_files = build_save_dataset('train', fields, opt)

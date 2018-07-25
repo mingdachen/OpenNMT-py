@@ -85,12 +85,14 @@ class TextDataset(DatasetBase):
         for ex_values in example_values:
             example = self._construct_example_fromlist(
                 ex_values, out_fields)
-            src_size += len(example.src)
+            src_size += len(example.src1)
             out_examples.append(example)
 
         def filter_pred(example):
             """ ? """
-            return 0 < len(example.src) <= src_seq_length \
+            return 0 < len(example.src1) <= src_seq_length \
+                and 0 < len(example.src2) <= src_seq_length \
+                and 0 < len(example.src3) <= src_seq_length \
                 and 0 < len(example.tgt) <= tgt_seq_length
 
         filter_pred = filter_pred if use_filter_pred else lambda x: True
@@ -104,8 +106,8 @@ class TextDataset(DatasetBase):
         # Default to a balanced sort, prioritizing tgt len match.
         # TODO: make this configurable.
         if hasattr(ex, "tgt"):
-            return len(ex.src), len(ex.tgt)
-        return len(ex.src)
+            return len(ex.src1), len(ex.tgt)
+        return len(ex.src1)
 
     @staticmethod
     def collapse_copy_scores(scores, batch, tgt_vocab, src_vocabs):
@@ -204,7 +206,7 @@ class TextDataset(DatasetBase):
                 yield line
 
     @staticmethod
-    def get_fields(n_src_features, n_tgt_features):
+    def get_fields(n_src_features1, n_src_features2, n_src_features3, n_tgt_features):
         """
         Args:
             n_src_features (int): the number of source features to
@@ -218,12 +220,28 @@ class TextDataset(DatasetBase):
         """
         fields = {}
 
-        fields["src"] = torchtext.data.Field(
+        fields["src1"] = torchtext.data.Field(
             pad_token=PAD_WORD,
             include_lengths=True)
 
-        for j in range(n_src_features):
-            fields["src_feat_" + str(j)] = \
+        for j in range(n_src_features1):
+            fields["src1_feat_" + str(j)] = \
+                torchtext.data.Field(pad_token=PAD_WORD)
+
+        fields["src2"] = torchtext.data.Field(
+            pad_token=PAD_WORD,
+            include_lengths=True)
+
+        for j in range(n_src_features2):
+            fields["src2_feat_" + str(j)] = \
+                torchtext.data.Field(pad_token=PAD_WORD)
+
+        fields["src3"] = torchtext.data.Field(
+            pad_token=PAD_WORD,
+            include_lengths=True)
+
+        for j in range(n_src_features3):
+            fields["src3_feat_" + str(j)] = \
                 torchtext.data.Field(pad_token=PAD_WORD)
 
         fields["tgt"] = torchtext.data.Field(
@@ -245,7 +263,15 @@ class TextDataset(DatasetBase):
                     alignment[j, i, t] = 1
             return alignment
 
-        fields["src_map"] = torchtext.data.Field(
+        fields["src_map1"] = torchtext.data.Field(
+            use_vocab=False, dtype=torch.float,
+            postprocessing=make_src, sequential=False)
+
+        fields["src_map2"] = torchtext.data.Field(
+            use_vocab=False, dtype=torch.float,
+            postprocessing=make_src, sequential=False)
+
+        fields["src_map3"] = torchtext.data.Field(
             use_vocab=False, dtype=torch.float,
             postprocessing=make_src, sequential=False)
 
@@ -291,13 +317,14 @@ class TextDataset(DatasetBase):
     # Below are helper functions for intra-class use only.
     def _dynamic_dict(self, examples_iter):
         for example in examples_iter:
-            src = example["src"]
-            src_vocab = torchtext.vocab.Vocab(Counter(src),
-                                              specials=[UNK_WORD, PAD_WORD])
-            self.src_vocabs.append(src_vocab)
-            # Mapping source tokens to indices in the dynamic dict.
-            src_map = torch.LongTensor([src_vocab.stoi[w] for w in src])
-            example["src_map"] = src_map
+            for i in range(1, 4):
+                src = example["src" + str(i)]
+                src_vocab = torchtext.vocab.Vocab(
+                    Counter(src), specials=[UNK_WORD, PAD_WORD])
+                self.src_vocabs.append(src_vocab)
+                # Mapping source tokens to indices in the dynamic dict.
+                src_map = torch.LongTensor([src_vocab.stoi[w] for w in src])
+                example["src_map" + str(i)] = src_map
 
             if "tgt" in example:
                 tgt = example["tgt"]

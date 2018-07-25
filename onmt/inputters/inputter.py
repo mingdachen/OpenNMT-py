@@ -118,7 +118,7 @@ def get_num_features(data_type, corpus_file, side):
     Returns:
         number of features on `side`.
     """
-    assert side in ['src1', 'src2', 'src3' 'tgt']
+    assert side in ['src1', 'src2', 'src3', 'tgt']
 
     if data_type == 'text':
         return TextDataset.get_num_features(corpus_file, side)
@@ -141,7 +141,7 @@ def make_features(batch, side, data_type='text'):
         A sequence of src/tgt tensors with optional feature tensors
         of size (len x batch).
     """
-    assert side in ['src1', 'src2', 'src3' 'tgt']
+    assert side in ['src1', 'src2', 'src3', 'tgt']
     if isinstance(batch.__dict__[side], tuple):
         data = batch.__dict__[side][0]
     else:
@@ -162,7 +162,7 @@ def collect_features(fields, side="src1"):
     """
     Collect features from Field object.
     """
-    assert side in ['src1', 'src2', 'src3' 'tgt']
+    assert side in ['src1', 'src2', 'src3', 'tgt']
     feats = []
     for j in count():
         key = side + "_feat_" + str(j)
@@ -176,7 +176,7 @@ def collect_feature_vocabs(fields, side):
     """
     Collect feature Vocab objects from Field object.
     """
-    assert side in ['src1', 'src2', 'src3' 'tgt']
+    assert side in ['src1', 'src2', 'src3', 'tgt']
     feature_vocabs = []
     for j in count():
         key = side + "_feat_" + str(j)
@@ -186,7 +186,8 @@ def collect_feature_vocabs(fields, side):
     return feature_vocabs
 
 
-def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
+def build_dataset(fields, data_type, src_data_iter=None, src_path1=None,
+                  src_path2=None, src_path3=None,
                   src_dir=None, tgt_data_iter=None, tgt_path=None,
                   src_seq_length=0, tgt_seq_length=0,
                   src_seq_length_trunc=0, tgt_seq_length_trunc=0,
@@ -232,19 +233,19 @@ def build_dataset(fields, data_type, src_data_iter=None, src_path=None,
         return src_examples_iter, num_src_feats
 
     src_examples_iter1, num_src_feats1 = \
-        _make_examples_nfeats_tpl(data_type, src_data_iter, src_path, src_dir,
+        _make_examples_nfeats_tpl(data_type, src_data_iter, src_path1, src_dir,
                                   src_seq_length_trunc, sample_rate,
                                   window_size, window_stride,
                                   window, normalize_audio, "src1")
 
     src_examples_iter2, num_src_feats2 = \
-        _make_examples_nfeats_tpl(data_type, src_data_iter, src_path, src_dir,
+        _make_examples_nfeats_tpl(data_type, src_data_iter, src_path2, src_dir,
                                   src_seq_length_trunc, sample_rate,
                                   window_size, window_stride,
                                   window, normalize_audio, "src2")
 
     src_examples_iter3, num_src_feats3 = \
-        _make_examples_nfeats_tpl(data_type, src_data_iter, src_path, src_dir,
+        _make_examples_nfeats_tpl(data_type, src_data_iter, src_path3, src_dir,
                                   src_seq_length_trunc, sample_rate,
                                   window_size, window_stride,
                                   window, normalize_audio, "src3")
@@ -378,7 +379,7 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
                                                len(fields[key].vocab)))
 
     if data_type == 'text':
-        for i in range(3):
+        for i in range(1, 4):
             field_name = "src" + str(i)
             _build_field_vocab(fields[field_name], counter[field_name],
                                max_size=src_vocab_size,
@@ -388,7 +389,7 @@ def build_vocab(train_dataset_files, fields, data_type, share_vocab,
 
             # All datasets have same num of n_src_features,
             # getting the last one is OK.
-            for j in range(dataset.n_src_feats):
+            for j in range(getattr(dataset, 'n_src_feats' + str(i))):
                 key = "src_feat_" + str(j)
                 _build_field_vocab(fields[key], counter[key])
                 logger.info(" * %s vocab size: %d." %

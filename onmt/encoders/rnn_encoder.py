@@ -105,3 +105,52 @@ class RNNEncoder(EncoderBase):
         else:
             outs = bottle_hidden(self.bridge[0], hidden)
         return outs
+
+
+class SortRNNEncoder(RNNEncoder):
+    def __init__(self, rnn_type, bidirectional, num_layers,
+                 hidden_size, dropout=0.0, embeddings=None,
+                 use_bridge=False):
+        super(SortRNNEncoder, self).__init__(
+            rnn_type,
+            bidirectional,
+            num_layers,
+            hidden_size,
+            dropout,
+            embeddings,
+            use_bridge)
+
+    def forward(self, src, lengths=None):
+        "See :obj:`EncoderBase.forward()`"
+        self._check_args(src, lengths)
+
+        emb = self.embeddings(src)
+        # s_len, batch, emb_dim = emb.size()
+
+        packed_emb = emb
+        if lengths is not None and not self.no_pack_padded_seq:
+            # Lengths data is wrapped inside a Tensor.
+            lengths = lengths.view(-1)
+            sorted_len, sorted_idx = lengths.sort(0, descending=True)
+            emb = emb.index_select(1, sorted_idx.long())
+            packed_emb = pack(emb, lengths)
+
+        memory_bank, encoder_final = self.rnn(packed_emb)
+
+        if self.use_bridge:
+            encoder_final = self._bridge(encoder_final)
+
+        if lengths is not None and not self.no_pack_padded_seq:
+            _, original_idx = sorted_idx.sort(0, descending=False)
+            memory_bank = unpack(memory_bank)[0]
+            memory_bank = memory_bank.index_select(1, original_idx.long())
+
+            if isinstance(encoder_final, tuple):
+                encoder_final = \
+                    (encoder_final[0].index_select(1, original_idx.long()),
+                     encoder_final[1].index_select(1, original_idx.long()))
+            else:
+                encoder_final = encoder_final.index_select(
+                    1, original_idx.long())
+
+        return encoder_final, memory_bank

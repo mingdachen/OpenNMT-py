@@ -143,7 +143,11 @@ def preprocess_opts(parser):
                        help="Path to the training source data")
     group.add_argument('-train_tgt', required=True,
                        help="Path to the training target data")
-    group.add_argument('-valid_src', required=True,
+    group.add_argument('-valid_src1', required=True,
+                       help="Path to the validation source data")
+    group.add_argument('-valid_src2', required=True,
+                       help="Path to the validation source data")
+    group.add_argument('-valid_src3', required=True,
                        help="Path to the validation source data")
     group.add_argument('-valid_tgt', required=True,
                        help="Path to the validation target data")

@@ -9,7 +9,7 @@ from torch.nn.init import xavier_uniform_
 
 import onmt.inputters as inputters
 import onmt.modules
-from onmt.encoders.rnn_encoder import RNNEncoder
+from onmt.encoders.rnn_encoder import RNNEncoder, SortRNNEncoder
 from onmt.encoders.transformer import TransformerEncoder
 from onmt.encoders.cnn_encoder import CNNEncoder
 from onmt.encoders.mean_encoder import MeanEncoder
@@ -81,9 +81,9 @@ def build_encoder(opt, embeddings):
             model = MeanEncoder(opt.enc_layers, embeddings)
         else:
             # "rnn" or "brnn"
-            model = RNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
-                               opt.rnn_size, opt.dropout, embeddings,
-                               opt.bridge)
+            model = SortRNNEncoder(opt.rnn_type, opt.brnn, opt.enc_layers,
+                                   opt.rnn_size, opt.dropout, embeddings,
+                                   opt.bridge)
         enc_list.append(model)
     return enc_list
 
@@ -161,8 +161,8 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
 
     # Build encoder.
     if model_opt.model_type == "text":
-        src_dict = fields["src"].vocab
-        feature_dicts = inputters.collect_feature_vocabs(fields, 'src')
+        src_dict = fields["src1"].vocab
+        feature_dicts = inputters.collect_feature_vocabs(fields, 'src1')
         src_embeddings = build_embeddings(model_opt, src_dict, feature_dicts)
         encoder = build_encoder(model_opt, src_embeddings)
     elif model_opt.model_type == "img":
@@ -229,9 +229,10 @@ def build_base_model(model_opt, fields, gpu, checkpoint=None):
                 if p.dim() > 1:
                     xavier_uniform_(p)
 
-        if hasattr(model.encoder, 'embeddings'):
-            model.encoder.embeddings.load_pretrained_vectors(
-                model_opt.pre_word_vecs_enc, model_opt.fix_word_vecs_enc)
+        for i in [1, 2, 3]:
+            if hasattr(getattr(model, 'encoder' + str(i)), 'embeddings'):
+                getattr(model, 'encoder' + str(i)).embeddings.load_pretrained_vectors(
+                    model_opt.pre_word_vecs_enc, model_opt.fix_word_vecs_enc)
         if hasattr(model.decoder, 'embeddings'):
             model.decoder.embeddings.load_pretrained_vectors(
                 model_opt.pre_word_vecs_dec, model_opt.fix_word_vecs_dec)

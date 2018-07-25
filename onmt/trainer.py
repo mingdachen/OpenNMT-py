@@ -262,12 +262,16 @@ class Trainer(object):
                 trunc_size = target_size
 
             dec_state = None
-            src = inputters.make_features(batch, 'src', self.data_type)
+            src1 = inputters.make_features(batch, 'src1', self.data_type)
+            src2 = inputters.make_features(batch, 'src2', self.data_type)
+            src3 = inputters.make_features(batch, 'src3', self.data_type)
             if self.data_type == 'text':
-                _, src_lengths = batch.src
-                report_stats.n_src_words += src_lengths.sum().item()
+                _, src_lengths1 = batch.src1
+                _, src_lengths2 = batch.src2
+                _, src_lengths3 = batch.src3
+                report_stats.n_src_words += src_lengths1.sum().item()
             else:
-                src_lengths = None
+                src_lengths1 = src_lengths2 = src_lengths3 = None
 
             tgt_outer = inputters.make_features(batch, 'tgt')
 
@@ -279,7 +283,8 @@ class Trainer(object):
                 if self.grad_accum_count == 1:
                     self.model.zero_grad()
                 outputs, attns, dec_state = \
-                    self.model(src, tgt, src_lengths, dec_state)
+                    self.model(src1, src2, src3, tgt, src_lengths1,
+                               src_lengths2, src_lengths3, dec_state)
 
                 # 3. Compute loss in shards for memory efficiency.
                 batch_stats = self.train_loss.sharded_compute_loss(

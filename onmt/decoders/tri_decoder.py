@@ -67,7 +67,7 @@ class RNNDecoderBase(nn.Module):
         self.decoder_type = 'rnn'
         self.bidirectional_encoder = bidirectional_encoder
         self.num_layers = num_layers
-        self.hidden_size = hidden_size
+        self.hidden_size = hidden_size * 3
         self.embeddings = embeddings
         self.dropout = nn.Dropout(dropout)
 
@@ -181,9 +181,9 @@ class RNNDecoderBase(nn.Module):
         if type(decoder_outputs) == list:
             decoder_outputs = torch.stack(decoder_outputs)
 
-            for k in attns:
-                if type(attns[k]) == list:
-                    attns[k] = torch.stack(attns[k])
+            # for k in attns:
+            #     if type(attns[k]) == list:
+            #         attns[k] = torch.stack(attns[k])
 
         return decoder_outputs, state, attns
 
@@ -396,7 +396,7 @@ class InputFeedRNNDecoder(RNNDecoderBase):
 
             input_feed = decoder_output
 
-            decoder_outputs += [decoder_output]
+            decoder_outputs += [rnn_output]
             attns["std"] += [(p_attn1, p_attn2, p_attn3)]
 
             # Update the coverage attention.
@@ -435,7 +435,7 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         """
         Using input feed by concatenating input with attention vectors.
         """
-        return self.embeddings.embedding_size + self.hidden_size * 3
+        return self.embeddings.embedding_size + self.hidden_size
 
 
 class DecoderState(object):
