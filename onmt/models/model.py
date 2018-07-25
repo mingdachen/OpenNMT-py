@@ -46,9 +46,9 @@ class NMTModel(nn.Module):
         """
         tgt = tgt[:-1]  # exclude last target from inputs
 
-        enc_final1, memory_bank1 = self.encoder(src1, lengths1)
-        enc_final2, memory_bank2 = self.encoder(src2, lengths2)
-        enc_final3, memory_bank3 = self.encoder(src3, lengths3)
+        enc_final1, memory_bank1 = self.encoder1(src1, lengths1)
+        enc_final2, memory_bank2 = self.encoder2(src2, lengths2)
+        enc_final3, memory_bank3 = self.encoder3(src3, lengths3)
 
         if isinstance(enc_final1, tuple):
             enc_final = ((enc_final1[0] + enc_final2[0] + enc_final3[0]) / 3.,

@@ -81,7 +81,15 @@ class RNNDecoderBase(nn.Module):
         # Set up the context gate.
         self.context_gate = None
         if context_gate is not None:
-            self.context_gate = onmt.modules.context_gate_factory(
+            self.context_gate1 = onmt.modules.context_gate_factory(
+                context_gate, self._input_size,
+                hidden_size, hidden_size, hidden_size
+            )
+            self.context_gate2 = onmt.modules.context_gate_factory(
+                context_gate, self._input_size,
+                hidden_size, hidden_size, hidden_size
+            )
+            self.context_gate3 = onmt.modules.context_gate_factory(
                 context_gate, self._input_size,
                 hidden_size, hidden_size, hidden_size
             )
@@ -106,7 +114,13 @@ class RNNDecoderBase(nn.Module):
         # Set up a separated copy attention layer, if needed.
         self._copy = False
         if copy_attn and not reuse_copy_attn:
-            self.copy_attn = onmt.modules.GlobalAttention(
+            self.copy_attn1 = onmt.modules.GlobalAttention(
+                hidden_size, attn_type=attn_type
+            )
+            self.copy_attn2 = onmt.modules.GlobalAttention(
+                hidden_size, attn_type=attn_type
+            )
+            self.copy_attn3 = onmt.modules.GlobalAttention(
                 hidden_size, attn_type=attn_type
             )
         if copy_attn:
@@ -346,17 +360,17 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             decoder_input = torch.cat([emb_t, input_feed], 1)
 
             rnn_output, hidden = self.rnn(decoder_input, hidden)
-            decoder_output1, p_attn = self.attn1(
+            decoder_output1, p_attn1 = self.attn1(
                 rnn_output,
                 memory_bank1.transpose(0, 1),
                 memory_lengths=memory_lengths1)
 
-            decoder_output2, p_attn = self.attn2(
+            decoder_output2, p_attn2 = self.attn2(
                 rnn_output,
                 memory_bank2.transpose(0, 1),
                 memory_lengths=memory_lengths2)
 
-            decoder_output3, p_attn = self.attn3(
+            decoder_output3, p_attn3 = self.attn3(
                 rnn_output,
                 memory_bank3.transpose(0, 1),
                 memory_lengths=memory_lengths3)
@@ -364,13 +378,13 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             if self.context_gate is not None:
                 # TODO: context gate should be employed
                 # instead of second RNN transform.
-                decoder_output1 = self.context_gate(
+                decoder_output1 = self.context_gate1(
                     decoder_input, rnn_output, decoder_output1
                 )
-                decoder_output2 = self.context_gate(
+                decoder_output2 = self.context_gate2(
                     decoder_input, rnn_output, decoder_output2
                 )
-                decoder_output3 = self.context_gate(
+                decoder_output3 = self.context_gate3(
                     decoder_input, rnn_output, decoder_output3
                 )
             decoder_output1 = self.dropout(decoder_output1)
@@ -378,24 +392,28 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             decoder_output3 = self.dropout(decoder_output3)
 
             decoder_output = torch.cat(
-                [decoder_output1, decoder_output2, decoder_output2], dim=-1)
+                [decoder_output1, decoder_output2, decoder_output3], dim=-1)
 
             input_feed = decoder_output
 
             decoder_outputs += [decoder_output]
-            attns["std"] += [p_attn]
+            attns["std"] += [(p_attn1, p_attn2, p_attn3)]
 
             # Update the coverage attention.
             if self._coverage:
-                coverage = coverage + p_attn \
-                    if coverage is not None else p_attn
+                coverage = coverage + p_attn1 \
+                    if coverage is not None else p_attn1
                 attns["coverage"] += [coverage]
 
             # Run the forward pass of the copy attention layer.
             if self._copy and not self._reuse_copy_attn:
-                _, copy_attn = self.copy_attn(decoder_output,
-                                              memory_bank1.transpose(0, 1))
-                attns["copy"] += [copy_attn]
+                _, copy_attn1 = self.copy_attn1(decoder_output1,
+                                                memory_bank1.transpose(0, 1))
+                _, copy_attn2 = self.copy_attn2(decoder_output2,
+                                                memory_bank2.transpose(0, 1))
+                _, copy_attn3 = self.copy_attn3(decoder_output3,
+                                                memory_bank3.transpose(0, 1))
+                attns["copy"] += [(copy_attn1, copy_attn2, copy_attn3)]
             elif self._copy:
                 attns["copy"] = attns["std"]
         # Return result.
