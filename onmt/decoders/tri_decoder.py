@@ -67,7 +67,7 @@ class RNNDecoderBase(nn.Module):
         self.decoder_type = 'rnn'
         self.bidirectional_encoder = bidirectional_encoder
         self.num_layers = num_layers
-        self.hidden_size = hidden_size * 3
+        self.hidden_size = hidden_size
         self.embeddings = embeddings
         self.dropout = nn.Dropout(dropout)
 
@@ -110,6 +110,8 @@ class RNNDecoderBase(nn.Module):
             hidden_size, coverage=coverage_attn,
             attn_type=attn_type
         )
+
+        self.dec2hid = nn.Linear(hidden_size * 3, hidden_size)
 
         # Set up a separated copy attention layer, if needed.
         self._copy = False
@@ -391,12 +393,12 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             decoder_output2 = self.dropout(decoder_output2)
             decoder_output3 = self.dropout(decoder_output3)
 
-            decoder_output = torch.cat(
-                [decoder_output1, decoder_output2, decoder_output3], dim=-1)
+            decoder_output = self.dec2hid(torch.cat(
+                [decoder_output1, decoder_output2, decoder_output3], dim=-1))
 
             input_feed = decoder_output
 
-            decoder_outputs += [rnn_output]
+            decoder_outputs += [decoder_output]
             attns["std"] += [(p_attn1, p_attn2, p_attn3)]
 
             # Update the coverage attention.

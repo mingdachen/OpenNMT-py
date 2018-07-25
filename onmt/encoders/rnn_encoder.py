@@ -133,7 +133,7 @@ class SortRNNEncoder(RNNEncoder):
             lengths = lengths.view(-1)
             sorted_len, sorted_idx = lengths.sort(0, descending=True)
             emb = emb.index_select(1, sorted_idx.long())
-            packed_emb = pack(emb, lengths)
+            packed_emb = pack(emb, sorted_len)
 
         memory_bank, encoder_final = self.rnn(packed_emb)
 
