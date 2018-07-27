@@ -111,6 +111,11 @@ class RNNDecoderBase(nn.Module):
             attn_type=attn_type
         )
 
+        # self.attn4 = onmt.modules.GlobalAttention(
+        #     hidden_size, coverage=coverage_attn,
+        #     attn_type=attn_type
+        # )
+
         self.dec2hid = nn.Linear(hidden_size * 3, hidden_size)
 
         # Set up a separated copy attention layer, if needed.
@@ -183,9 +188,9 @@ class RNNDecoderBase(nn.Module):
         if type(decoder_outputs) == list:
             decoder_outputs = torch.stack(decoder_outputs)
 
-            # for k in attns:
-            #     if type(attns[k]) == list:
-            #         attns[k] = torch.stack(attns[k])
+            for k in attns:
+                if type(attns[k]) == list:
+                    attns[k] = torch.stack(attns[k])
 
         return decoder_outputs, state, attns
 
@@ -355,6 +360,11 @@ class InputFeedRNNDecoder(RNNDecoderBase):
         coverage = state.coverage.squeeze(0) \
             if state.coverage is not None else None
 
+        # memory_bank3, _ = self.attn4(
+        #     memory_bank2.transpose(0, 1).contiguous(),
+        #     memory_bank3.transpose(0, 1),
+        #     memory_lengths=memory_lengths3)
+
         # Input feed concatenates hidden state with
         # input at every time step.
         for _, emb_t in enumerate(emb.split(1)):
@@ -399,7 +409,8 @@ class InputFeedRNNDecoder(RNNDecoderBase):
             input_feed = decoder_output
 
             decoder_outputs += [decoder_output]
-            attns["std"] += [(p_attn1, p_attn2, p_attn3)]
+            # attns["std"] += [(p_attn1, p_attn2, p_attn3)]
+            attns["std"] += [p_attn2]
 
             # Update the coverage attention.
             if self._coverage:
@@ -415,7 +426,8 @@ class InputFeedRNNDecoder(RNNDecoderBase):
                                                 memory_bank2.transpose(0, 1))
                 _, copy_attn3 = self.copy_attn3(decoder_output3,
                                                 memory_bank3.transpose(0, 1))
-                attns["copy"] += [(copy_attn1, copy_attn2, copy_attn3)]
+                # attns["copy"] += [(copy_attn1, copy_attn2, copy_attn3)]
+                attns["copy"] += [copy_attn2]
             elif self._copy:
                 attns["copy"] = attns["std"]
         # Return result.

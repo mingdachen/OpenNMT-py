@@ -66,9 +66,11 @@ class TranslationBuilder(object):
         inds, perm = torch.sort(batch.indices.data)
         data_type = self.data.data_type
         if data_type == 'text':
-            src = batch.src[0].data.index_select(1, perm)
+            src1 = batch.src1[0].data.index_select(1, perm)
+            src2 = batch.src2[0].data.index_select(1, perm)
+            src3 = batch.src3[0].data.index_select(1, perm)
         else:
-            src = None
+            src1 = src2 = src3 = None
 
         if self.has_tgt:
             tgt = batch.tgt.data.index_select(1, perm)
@@ -80,24 +82,31 @@ class TranslationBuilder(object):
             if data_type == 'text':
                 src_vocab = self.data.src_vocabs[inds[b]] \
                     if self.data.src_vocabs else None
-                src_raw = self.data.examples[inds[b]].src
+                src_raw1 = self.data.examples[inds[b]].src1
+                src_raw2 = self.data.examples[inds[b]].src2
+                src_raw3 = self.data.examples[inds[b]].src3
+                # src_raw1 = src_raw2 = src_raw3 = None
             else:
                 src_vocab = None
-                src_raw = None
+                src_raw1 = src_raw2 = src_raw3 = None
             pred_sents = [self._build_target_tokens(
-                src[:, b] if src is not None else None,
-                src_vocab, src_raw,
+                src2[:, b] if src2 is not None else None,
+                src_vocab, src_raw2,
                 preds[b][n], attn[b][n])
                 for n in range(self.n_best)]
             gold_sent = None
             if tgt is not None:
                 gold_sent = self._build_target_tokens(
-                    src[:, b] if src is not None else None,
-                    src_vocab, src_raw,
+                    src2[:, b] if src2 is not None else None,
+                    src_vocab, src_raw2,
                     tgt[1:, b] if tgt is not None else None, None)
 
-            translation = Translation(src[:, b] if src is not None else None,
-                                      src_raw, pred_sents,
+            translation = Translation(src1[:, b] if src1 is not None else None,
+                                      src_raw1,
+                                      src2[:, b] if src2 is not None else None,
+                                      src_raw2,
+                                      src3[:, b] if src3 is not None else None,
+                                      src_raw3, pred_sents,
                                       attn[b], pred_score[b], gold_sent,
                                       gold_score[b])
             translations.append(translation)
@@ -121,10 +130,15 @@ class Translation(object):
 
     """
 
-    def __init__(self, src, src_raw, pred_sents,
+    def __init__(self, src1, src_raw1, src2, src_raw2,
+                 src3, src_raw3, pred_sents,
                  attn, pred_scores, tgt_sent, gold_score):
-        self.src = src
-        self.src_raw = src_raw
+        self.src1 = src1
+        self.src_raw1 = src_raw1
+        self.src2 = src2
+        self.src_raw2 = src_raw2
+        self.src3 = src3
+        self.src_raw3 = src_raw3
         self.pred_sents = pred_sents
         self.attns = attn
         self.pred_scores = pred_scores
@@ -136,7 +150,9 @@ class Translation(object):
         Log translation.
         """
 
-        output = '\nSENT {}: {}\n'.format(sent_number, self.src_raw)
+        output = '\nSENT1 {}: {}\n'.format(sent_number, self.src_raw1)
+        output += 'SENT2 {}: {}\n'.format(sent_number, self.src_raw2)
+        output += 'SENT3 {}: {}\n'.format(sent_number, self.src_raw3)
 
         best_pred = self.pred_sents[0]
         best_score = self.pred_scores[0]

@@ -225,16 +225,22 @@ class Trainer(object):
             cur_dataset = valid_iter.get_cur_dataset()
             self.valid_loss.cur_dataset = cur_dataset
 
-            src = inputters.make_features(batch, 'src', self.data_type)
+            src1 = inputters.make_features(batch, 'src1', self.data_type)
+            src2 = inputters.make_features(batch, 'src2', self.data_type)
+            src3 = inputters.make_features(batch, 'src3', self.data_type)
             if self.data_type == 'text':
-                _, src_lengths = batch.src
+                _, src_lengths1 = batch.src1
+                _, src_lengths2 = batch.src2
+                _, src_lengths3 = batch.src3
             else:
-                src_lengths = None
+                src_lengths1 = src_lengths2 = src_lengths3 = None
 
             tgt = inputters.make_features(batch, 'tgt')
 
             # F-prop through the model.
-            outputs, attns, _ = self.model(src, tgt, src_lengths)
+            outputs, attns, dec_state = \
+                self.model(src1, src2, src3, tgt, src_lengths1,
+                           src_lengths2, src_lengths3)
 
             # Compute loss.
             batch_stats = self.valid_loss.monolithic_compute_loss(

@@ -17,7 +17,9 @@ import onmt.opts
 
 def main(opt):
     translator = build_translator(opt, report_score=True)
-    translator.translate(src_path=opt.src,
+    translator.translate(src_path1=opt.src1,
+                         src_path2=opt.src2,
+                         src_path3=opt.src3,
                          tgt_path=opt.tgt,
                          src_dir=opt.src_dir,
                          batch_size=opt.batch_size,
